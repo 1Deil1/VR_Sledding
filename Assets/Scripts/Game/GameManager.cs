@@ -32,7 +32,7 @@ public class GameManager : MonoBehaviour
         if (State == GameState.WaitingForPhone)
         {
             // Automatically start once the phone connects
-            if (PhoneInputServer.Instance != null && PhoneInputServer.Instance.IsConnected)
+            if (RelayClient.Instance != null && RelayClient.Instance.IsPhoneConnected)
                 StartGame();
         }
     }

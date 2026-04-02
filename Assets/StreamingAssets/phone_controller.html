@@ -1,12 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
   <title>Sled Controller</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     body {
       font-family: system-ui, sans-serif;
       background: #0a0a1a;
@@ -17,197 +16,131 @@
       justify-content: center;
       min-height: 100dvh;
       padding: 1.5rem;
-      gap: 1rem;
+      gap: 1.2rem;
     }
-
-    h1  { font-size: 2rem; }
-    p   { color: #aaa; font-size: 0.95rem; text-align: center; }
-
+    h1 { font-size: 2rem; }
+    p  { color: #aaa; font-size: 0.9rem; text-align: center; max-width: 300px; }
     #status {
-      font-size: 1rem;
-      font-weight: bold;
-      color: #f0a;
-      min-height: 1.5rem;
-      white-space: pre-line;
-      text-align: center;
-      max-width: 320px;
-      line-height: 1.5;
+      font-size: 1rem; font-weight: bold; color: #fa0;
+      text-align: center; max-width: 320px; line-height: 1.5; min-height: 2rem;
     }
-
-    #values {
-      font-size: 1rem;
-      color: #7df;
-      min-height: 1.5rem;
-      letter-spacing: 0.05em;
-    }
-
-    #ipInput {
-      padding: 0.6rem 1rem;
-      font-size: 1rem;
-      border-radius: 8px;
-      border: 2px solid #444;
-      background: #111;
-      color: #fff;
-      width: 100%;
-      max-width: 260px;
-      text-align: center;
-    }
-
+    #values { font-size: 1rem; color: #7df; letter-spacing: 0.05em; }
     button {
-      padding: 1rem 2.5rem;
-      font-size: 1.1rem;
-      border: none;
-      border-radius: 12px;
-      background: #3af;
-      color: #000;
-      cursor: pointer;
-      font-weight: bold;
+      padding: 1rem 2.5rem; font-size: 1.1rem;
+      border: none; border-radius: 12px;
+      background: #3af; color: #000;
+      cursor: pointer; font-weight: bold;
       touch-action: manipulation;
     }
     button:active { filter: brightness(0.85); }
-
     #tiltViz {
-      width: 120px;
-      height: 120px;
-      border: 2px solid #333;
-      border-radius: 50%;
-      position: relative;
-      margin-top: 0.5rem;
+      width: 120px; height: 120px;
+      border: 2px solid #333; border-radius: 50%;
+      position: relative; margin-top: 0.5rem;
     }
     #dot {
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      background: #3af;
-      position: absolute;
-      top: 50%;
-      left: 50%;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: #3af; position: absolute;
+      top: 50%; left: 50%;
       transform: translate(-50%, -50%);
       transition: top 0.05s, left 0.05s;
     }
   </style>
 </head>
 <body>
-  <h1>🛷 Sled Controller</h1>
-  <p>Enter the IP shown in the game, then tap <strong>Connect</strong>.</p>
-
-  <input id="ipInput" type="text" inputmode="decimal"
-         placeholder="192.168.x.x" autocomplete="off" />
-
-  <div id="status">Not connected</div>
-
-  <button id="connectBtn" onclick="connect()">Connect &amp; Start</button>
-
-  <div id="values">Pitch: 0.0° | Roll: 0.0°</div>
-
-  <!-- Simple tilt visualiser -->
+  <h1>&#x1f6f7; Sled Controller</h1>
+  <div id="status">Connecting to relay...</div>
+  <button id="connectBtn" onclick="requestPermission()" style="display:none">
+    Tap to Enable Motion
+  </button>
+  <div id="values">Pitch: 0.0&deg; | Roll: 0.0&deg;</div>
   <div id="tiltViz"><div id="dot"></div></div>
 
   <script>
     "use strict";
 
-    let ws      = null;
+    const params   = new URLSearchParams(window.location.search);
+    const relayUrl = params.get("relay");
+
+    if (!relayUrl) {
+      setStatus("\u26a0\ufe0f No relay URL provided.\nAsk the game host for the correct QR code.", "#f44");
+    } else {
+      connectToRelay(relayUrl);
+    }
+
+    let ws = null;
     let sending = false;
 
-    // ── Connect ──────────────────────────────────────────────────────────────
-    function connect() {
-      const ip = document.getElementById("ipInput").value.trim();
-      if (!ip) { alert("Please enter the game IP address."); return; }
+    function connectToRelay(url) {
+      setStatus("Connecting to relay...", "#fa0");
+      ws = new WebSocket(url);
 
-      // iOS 13+ requires explicit permission for DeviceOrientation
+      ws.onopen = () => {
+        // Register as phone
+        ws.send(JSON.stringify({ type: "register", role: "phone" }));
+        setStatus("\u2705 Relay connected!\nTap button to enable motion.", "#0f0");
+        document.getElementById("connectBtn").style.display = "block";
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === "status") {
+            if (msg.gameConnected) {
+              setStatus("\ud83c\udfae Game connected! Start leaning.", "#0f0");
+            } else {
+              setStatus("\u23f3 Waiting for game to connect...", "#fa0");
+            }
+          }
+        } catch {}
+      };
+
+      ws.onclose = () => {
+        setStatus("\u274c Relay disconnected. Refresh to retry.", "#f44");
+        sending = false;
+      };
+
+      ws.onerror = () => {
+        setStatus("\u26a0\ufe0f Connection error. Check relay URL.", "#f44");
+      };
+    }
+
+    function requestPermission() {
       if (typeof DeviceOrientationEvent !== "undefined" &&
           typeof DeviceOrientationEvent.requestPermission === "function") {
         DeviceOrientationEvent.requestPermission()
           .then(state => {
-            if (state === "granted") openWebSocket(ip);
-            else alert("Motion permission denied.\nEnable it in: Settings › Safari › Motion & Orientation Access.");
-          })
-          .catch(console.error);
+            if (state === "granted") startSending();
+            else setStatus("\u274c Motion permission denied.\nSettings \u203a Safari \u203a Motion & Orientation Access", "#f44");
+          }).catch(console.error);
       } else {
-        openWebSocket(ip);
+        startSending();
       }
     }
 
-    function openWebSocket(ip) {
-      const wsUrl = "ws://" + ip + ":8080";
-      setStatus("Connecting to " + wsUrl + " …", "#fa0");
-
-      // Always connect via plain WebSocket (ws://) on port 8080.
-      // iPhone: open this file from the Files app via Share → Open in Safari
-      //         so it runs as file:// (a secure context).
-      ws = new WebSocket(wsUrl);
-
-      // Timeout: if onopen hasn't fired after 5 s, show a helpful message.
-      let connTimeout = setTimeout(() => {
-        if (!ws || ws.readyState !== WebSocket.OPEN) {
-          ws && ws.close();
-          setStatus(
-            "⏱ Timed out connecting to " + wsUrl +
-            ".\n• Is Unity running?\n• Correct IP?\n" +
-            "• iPhone: Settings › Privacy › Local Network → allow Safari",
-            "#fa0"
-          );
-        }
-      }, 5000);
-
-      ws.onopen = () => {
-        clearTimeout(connTimeout);
-        setStatus("✅ Connected!", "#0f0");
-        sending = true;
-        window.addEventListener("deviceorientation", onOrientation, { passive: true });
-      };
-
-      ws.onclose = (e) => {
-        clearTimeout(connTimeout);
-        setStatus("❌ Disconnected (code " + e.code + ")", "#f44");
-        sending = false;
-        window.removeEventListener("deviceorientation", onOrientation);
-      };
-
-      ws.onerror = () => {
-        clearTimeout(connTimeout);
-        setStatus(
-          "⚠️ Error connecting to " + wsUrl +
-          ".\nCheck IP, Unity running, and Local Network permission.",
-          "#fa0"
-        );
-      };
+    function startSending() {
+      sending = true;
+      document.getElementById("connectBtn").style.display = "none";
+      setStatus("\ud83c\udfae Sending tilt data!", "#0f0");
+      window.addEventListener("deviceorientation", onOrientation, { passive: true });
     }
 
-    // ── Tilt event ───────────────────────────────────────────────────────────
     function onOrientation(event) {
       if (!sending || !ws || ws.readyState !== WebSocket.OPEN) return;
-
-      // beta  = pitch (forward/back tilt, −180..180, 0 = flat)
-      // gamma = roll  (left/right tilt,   −90..90,   0 = flat)
       const pitch = event.beta  ?? 0;
       const roll  = event.gamma ?? 0;
-
       document.getElementById("values").textContent =
-        "Pitch: " + pitch.toFixed(1) + "°  |  Roll: " + roll.toFixed(1) + "°";
-
-      // Move visualiser dot
-      const radius = 50; // px
-      const dotX   = 50 + (roll  / 90)  * radius;
-      const dotY   = 50 - (pitch / 180) * radius;
-      const dot    = document.getElementById("dot");
-      dot.style.left = dotX + "%";
-      dot.style.top  = dotY + "%";
-
+        "Pitch: " + pitch.toFixed(1) + "\u00b0  |  Roll: " + roll.toFixed(1) + "\u00b0";
+      const dot = document.getElementById("dot");
+      dot.style.left = (50 + (roll / 90) * 50) + "%";
+      dot.style.top  = (50 - (pitch / 180) * 50) + "%";
       ws.send(JSON.stringify({ pitch, roll }));
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────────────
     function setStatus(msg, color) {
-      const el   = document.getElementById("status");
+      const el = document.getElementById("status");
       el.textContent = msg;
       el.style.color = color || "#fff";
-    }
-
-    // Pre-fill IP from URL parameter ?ip=192.168.x.x (convenience for QR codes)
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("ip")) {
-      document.getElementById("ipInput").value = params.get("ip");
     }
   </script>
 </body>

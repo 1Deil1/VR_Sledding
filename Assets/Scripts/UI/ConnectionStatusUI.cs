@@ -29,9 +29,9 @@ public class ConnectionStatusUI : MonoBehaviour
 
     private void Update()
     {
-        if (PhoneInputServer.Instance == null) return;
+        if (RelayClient.Instance == null) return;
 
-        bool connected = PhoneInputServer.Instance.IsConnected;
+        bool connected = RelayClient.Instance.IsPhoneConnected;
         if (connected != _lastConnectedState)
         {
             _lastConnectedState = connected;
@@ -43,12 +43,12 @@ public class ConnectionStatusUI : MonoBehaviour
 
     private void RefreshIPDisplay()
     {
-        if (ipText == null || PhoneInputServer.Instance == null) return;
+        if (ipText == null || RelayClient.Instance == null) return;
 
-        string ip = PhoneInputServer.Instance.LocalIPAddress;
+        string url = RelayClient.Instance.RelayUrl;
         ipText.text =
-            $"Game IP Address\n<b>{ip}</b>\n\n" +
-            $"Open on phone:\nhttp://{ip}:8081/controller";
+            $"Relay Server\n<b>{url}</b>\n\n" +
+            $"Scan the QR code to connect";
     }
 
     private void SetStatus(bool connected)

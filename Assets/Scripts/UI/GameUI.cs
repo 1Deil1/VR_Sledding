@@ -36,17 +36,11 @@ public class GameUI : MonoBehaviour
         ShowWaitingForPhoneUI();
 
         // Show both URLs so the player knows which one to open on their phone
-        if (PhoneInputServer.Instance != null && ipAddressText != null)
+        if (RelayClient.Instance != null && ipAddressText != null)
         {
-            string ip = PhoneInputServer.Instance.LocalIPAddress;
             ipAddressText.text =
-                $"<b>Android</b>\nOpen in browser:\nhttp://{ip}:8081/controller\n\n" +
-                $"<b>iPhone</b>\n" +
-                $"1. Safari \u2192 http://{ip}:8081/download\n" +
-                $"   (file downloads automatically)\n" +
-                $"2. Files app \u2192 On My iPhone \u2192 Downloads\n" +
-                $"   Tap sled_controller.html\n" +
-                $"3. Enter IP \u2192 Connect & Start \u2192 Allow";
+                "Scan the QR code on the Start Screen\n" +
+                "to connect your phone controller.";
         }
     }
 

@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// Controls the sled movement based on phone tilt input received from PhoneInputServer.
+/// Controls the sled movement based on phone tilt input received from RelayClient.
 /// Pitch controls speed (forward lean = faster, backward lean = brake).
 /// Roll controls steering (left/right lean).
 /// The sled always moves forward along the slope; gravity is simulated manually.
@@ -52,10 +52,10 @@ public class SledController : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if (PhoneInputServer.Instance == null) return;
+        if (RelayClient.Instance == null || !RelayClient.Instance.IsPhoneConnected) return;
 
-        float pitch = PhoneInputServer.Instance.Pitch;
-        float roll  = PhoneInputServer.Instance.Roll;
+        float pitch = RelayClient.Instance.Pitch;
+        float roll  = RelayClient.Instance.Roll;
 
         CheckGrounded();
         HandleSpeed(pitch);
