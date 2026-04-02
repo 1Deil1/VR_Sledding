@@ -56,27 +56,54 @@
   <div id="values">Pitch: 0.0&deg; | Roll: 0.0&deg;</div>
   <div id="tiltViz"><div id="dot"></div></div>
 
+  <div id="debug" style="font-size:0.7rem;color:#666;max-width:320px;word-break:break-all;margin-top:0.5rem;text-align:center"></div>
+
   <script>
     "use strict";
 
     const params   = new URLSearchParams(window.location.search);
     const relayUrl = params.get("relay");
+    const debugEl  = document.getElementById("debug");
+
+    let ws = null;
+    let sending = false;
+    let connectTimer = null;
 
     if (!relayUrl) {
       setStatus("\u26a0\ufe0f No relay URL provided.\nAsk the game host for the correct QR code.", "#f44");
     } else {
+      debugEl.textContent = "Relay: " + relayUrl;
       connectToRelay(relayUrl);
     }
 
-    let ws = null;
-    let sending = false;
-
     function connectToRelay(url) {
       setStatus("Connecting to relay...", "#fa0");
-      ws = new WebSocket(url);
+
+      // First test HTTP connectivity to the relay
+      const httpUrl = url.replace("wss://", "https://").replace("ws://", "http://") + "/ping";
+      fetch(httpUrl, { mode: "cors" })
+        .then(r => r.text())
+        .then(t => { debugEl.textContent = "Relay: " + url + " | ping: " + t; })
+        .catch(e => { debugEl.textContent = "Relay: " + url + " | ping failed: " + e.message; });
+
+      try {
+        ws = new WebSocket(url);
+      } catch (e) {
+        setStatus("\u26a0\ufe0f WebSocket creation failed: " + e.message, "#f44");
+        return;
+      }
+
+      // Timeout: if no onopen/onerror/onclose within 10s, something is wrong
+      connectTimer = setTimeout(() => {
+        if (ws && ws.readyState === WebSocket.CONNECTING) {
+          setStatus("\u26a0\ufe0f Connection timed out.\nRelay may be unreachable. Retrying...", "#f44");
+          ws.close();
+          setTimeout(() => connectToRelay(url), 3000);
+        }
+      }, 10000);
 
       ws.onopen = () => {
-        // Register as phone
+        clearTimeout(connectTimer);
         ws.send(JSON.stringify({ type: "register", role: "phone" }));
         setStatus("\u2705 Relay connected!\nTap button to enable motion.", "#0f0");
         document.getElementById("connectBtn").style.display = "block";
@@ -95,13 +122,17 @@
         } catch {}
       };
 
-      ws.onclose = () => {
-        setStatus("\u274c Relay disconnected. Refresh to retry.", "#f44");
+      ws.onclose = (ev) => {
+        clearTimeout(connectTimer);
+        setStatus("\u274c Disconnected (code: " + ev.code + "). Retrying in 3s...", "#f44");
         sending = false;
+        setTimeout(() => connectToRelay(url), 3000);
       };
 
       ws.onerror = () => {
-        setStatus("\u26a0\ufe0f Connection error. Check relay URL.", "#f44");
+        clearTimeout(connectTimer);
+        setStatus("\u26a0\ufe0f Connection error. Retrying in 3s...", "#f44");
+        // onclose will also fire after onerror, which handles retry
       };
     }
 

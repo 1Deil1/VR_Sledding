@@ -25,7 +25,8 @@ public class QRCodeGenerator : MonoBehaviour
 
     public void GenerateQRCode()
     {
-        string fullUrl = $"{githubPagesUrl}?relay={relayWssUrl}";
+        string encodedRelay = System.Uri.EscapeDataString(relayWssUrl);
+        string fullUrl = $"{githubPagesUrl}?relay={encodedRelay}";
         Debug.Log($"[QRCode] Generating for: {fullUrl}");
 
         Texture2D tex = GenerateQRTexture(fullUrl, textureSize);

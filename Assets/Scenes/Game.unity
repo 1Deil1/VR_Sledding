@@ -130,8 +130,6 @@ GameObject:
   - component: {fileID: 76673418}
   - component: {fileID: 76673417}
   - component: {fileID: 76673416}
-  - component: {fileID: 76673415}
-  - component: {fileID: 76673414}
   - component: {fileID: 76673413}
   - component: {fileID: 76673412}
   - component: {fileID: 76673411}
@@ -204,36 +202,6 @@ MonoBehaviour:
   maxAngleChangePerSegment: 0.2
   segmentsBehind: 2
   sledTransform: {fileID: 342428625}
---- !u!114 &76673414
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 76673410}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5bfa0bd0cdc207a40b211c72e0bcdffe, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  httpPort: 8081
---- !u!114 &76673415
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 76673410}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d2334ddc3471158489d738477972f307, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  port: 8080
-  logMessages: 0
-  smoothingSpeed: 8
-  maxPitchInput: 40
-  maxRollInput: 40
 --- !u!114 &76673416
 MonoBehaviour:
   m_ObjectHideFlags: 0

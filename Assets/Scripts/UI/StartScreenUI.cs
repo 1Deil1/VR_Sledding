@@ -78,7 +78,7 @@ public class StartScreenUI : MonoBehaviour
         {
             startButton.interactable = phoneOk;
             if (startButtonText != null)
-                startButtonText.text = phoneOk ? "▶  Start Game" : "Waiting for controller...";
+                startButtonText.text = phoneOk ? "Start Game" : "Waiting for controller...";
         }
     }
 
