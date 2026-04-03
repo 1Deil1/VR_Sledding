@@ -10,21 +10,41 @@ using TMPro;
 /// </summary>
 public class ConnectionStatusUI : MonoBehaviour
 {
+    [Header("Style")]
+    [SerializeField] private UIStyleConfig styleConfig;
+
     [Header("Text References")]
     [SerializeField] private TextMeshProUGUI statusText;
     [SerializeField] private TextMeshProUGUI ipText;
 
-    [Header("Status Colors")]
-    [SerializeField] private Color connectedColor    = Color.green;
-    [SerializeField] private Color disconnectedColor = Color.red;
-    [SerializeField] private Color waitingColor      = Color.yellow;
+    // Resolved at runtime from styleConfig (or fallback defaults)
+    private Color connectedColor;
+    private Color disconnectedColor;
+    private Color waitingColor;
 
     private bool _lastConnectedState = false;
 
     private void Start()
     {
+        ResolveColors();
         RefreshIPDisplay();
         SetStatus(false);
+    }
+
+    private void ResolveColors()
+    {
+        if (styleConfig != null)
+        {
+            connectedColor    = styleConfig.connectedColor;
+            disconnectedColor = styleConfig.disconnectedColor;
+            waitingColor      = styleConfig.waitingColor;
+        }
+        else
+        {
+            connectedColor    = Color.green;
+            disconnectedColor = Color.red;
+            waitingColor      = Color.yellow;
+        }
     }
 
     private void Update()
@@ -49,6 +69,15 @@ public class ConnectionStatusUI : MonoBehaviour
         ipText.text =
             $"Relay Server\n<b>{url}</b>\n\n" +
             $"Scan the QR code to connect";
+    }
+
+    /// <summary>
+    /// Apply text color after TMP rebuilds its mesh in Update().
+    /// </summary>
+    private void LateUpdate()
+    {
+        if (styleConfig != null && ipText != null)
+            UIStyleApplier.ApplyTextColor(ipText, styleConfig.textColor);
     }
 
     private void SetStatus(bool connected)

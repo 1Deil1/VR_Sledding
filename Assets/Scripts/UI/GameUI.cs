@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 using TMPro;
 
 /// <summary>
@@ -10,6 +11,9 @@ using TMPro;
 /// </summary>
 public class GameUI : MonoBehaviour
 {
+    [Header("Style")]
+    [SerializeField] private UIStyleConfig styleConfig;
+
     [Header("Panels")]
     [SerializeField] private GameObject waitingForPhonePanel;
     [SerializeField] private GameObject playingPanel;
@@ -28,11 +32,22 @@ public class GameUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI finalScoreText;
     [SerializeField] private TextMeshProUGUI gameOverHighScoreText;
 
+    [Header("Buttons")]
+    [SerializeField] private Button restartButton;
+
     [Header("References")]
     [SerializeField] private SledController sledController;
 
     private void Start()
     {
+        // Auto-find sled controller if not assigned in Inspector
+        if (sledController == null)
+            sledController = FindAnyObjectByType<SledController>();
+
+        // Wire up restart button in code (World Space sub-Canvas can break Inspector OnClick)
+        if (restartButton != null)
+            restartButton.onClick.AddListener(OnRestartPressed);
+
         ShowWaitingForPhoneUI();
 
         // Show both URLs so the player knows which one to open on their phone
@@ -42,6 +57,13 @@ public class GameUI : MonoBehaviour
                 "Scan the QR code on the Start Screen\n" +
                 "to connect your phone controller.";
         }
+    }
+
+    /// <summary>Applies panel background color from styleConfig to a single panel.</summary>
+    private void StylePanel(GameObject panel)
+    {
+        if (styleConfig == null || panel == null) return;
+        UIStyleApplier.ApplyPanelColor(panel, styleConfig.panelColor);
     }
 
     private void Update()
@@ -57,18 +79,39 @@ public class GameUI : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Apply text color AFTER TMP has rebuilt its mesh in Update().
+    /// This is the only reliable way to override TMP text colors at runtime.
+    /// </summary>
+    private void LateUpdate()
+    {
+        if (styleConfig == null) return;
+        ApplyTextIfActive(waitingForPhonePanel);
+        ApplyTextIfActive(playingPanel);
+        ApplyTextIfActive(crashPanel);
+        ApplyTextIfActive(gameOverPanel);
+    }
+
+    private void ApplyTextIfActive(GameObject panel)
+    {
+        if (panel != null && panel.activeSelf)
+            UIStyleApplier.ApplyTextColorToAll(panel, styleConfig.textColor);
+    }
+
     // ── Panel switching ───────────────────────────────────────────────────────
 
     public void ShowWaitingForPhoneUI()
     {
         SetAllPanels(false);
         waitingForPhonePanel?.SetActive(true);
+        StylePanel(waitingForPhonePanel);
     }
 
     public void ShowPlayingUI()
     {
         SetAllPanels(false);
         playingPanel?.SetActive(true);
+        StylePanel(playingPanel);
 
         if (highScoreText != null && ScoreManager.Instance != null)
             highScoreText.text = $"Best: {ScoreManager.Instance.HighScore}m";
@@ -78,12 +121,15 @@ public class GameUI : MonoBehaviour
     {
         // Overlay the crash panel on top of the playing panel
         crashPanel?.SetActive(true);
+        StylePanel(crashPanel);
     }
 
     public void ShowGameOverUI()
     {
         SetAllPanels(false);
         gameOverPanel?.SetActive(true);
+        StylePanel(gameOverPanel);
+        UIStyleApplier.ApplyButtonColors(restartButton, styleConfig);
 
         if (ScoreManager.Instance != null)
         {
@@ -105,5 +151,8 @@ public class GameUI : MonoBehaviour
 
     // ── Button callbacks ──────────────────────────────────────────────────────
 
-    public void OnRestartPressed() => GameManager.Instance?.RestartGame();
+    public void OnRestartPressed()
+    {
+        UnityEngine.SceneManagement.SceneManager.LoadScene("StartScreen");
+    }
 }
